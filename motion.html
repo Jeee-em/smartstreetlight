@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Motion Detection Thesis Project</title>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.23/css/dataTables.bootstrap4.min.css">
+
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+  <!-- DataTables JS -->
+  <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+
+  <!-- DataTables Bootstrap 4 Integration JS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+  <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.23/js/dataTables.bootstrap4.min.js"></script>
+
+  <!-- Include Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <!-- Add Chart.js library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Custom styles for responsiveness */
+    .table-container {
+      overflow-x: none;
+    }
+  
+    .table {
+    width: 100%; /* Make the table width 100% of its container */
+    margin: 10px auto; /* Center the table horizontally */
+    max-width: 2000px; /* Set a maximum width for the table */
+  }
+
+  @media (max-width: 576px) {
+    .table-container {
+      overflow-x: auto;
+    }
+
+    .col-md-2 {
+      max-width: 100%;
+    }
+
+    .table {
+      width: 100%; /* Make the table width 100% of its container */
+      margin: 10px auto; /* Center the table horizontally */
+      max-width: 100%; /* Set a maximum width for the table */
+    }
+  }
+
+  </style>
+</head>
+
+<body>
+  <div class="container">  
+    <!-- Motion Detection Table -->
+    <div class="row justify-content-center">
+      <div class="col-md-10">       
+        <div class="table-container mt-4">
+          <h1 class="mt-4 text-center">Motion Detection Records</h1>
+          <table id="dataTable" class="display table table-bordered table-striped" width="100%">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Sensor 1</th>
+                <th>Sensor 2</th>
+                <th>Sensor 3</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Add your table rows here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Total Counts Table -->
+    <div class="row justify-content-center mt-4">
+      <div class="col-md-10">
+        <div class="table-container">
+          <h3 class="text-center mb-10">Total Motion Per Day</h3>
+          <table id="totalCountsTable" class="table table-bordered table-striped">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Sensor 1</th>
+                <th>Sensor 2</th>
+                <th>Sensor 3</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Add your table rows here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  
+    <!-- Total Counts Chart -->
+    <div class="row">
+      <div class="col-md-12">
+        <hr>
+        <div class="table-container">
+          <canvas id="totalCountsBarChart" width="400" height="200"></canvas>
+          <canvas id="totalCountsLineChart" width="400" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+
+  <script type="module">
+const firebaseConfig = {
+  apiKey: "AIzaSyAf25VFibNijidy1Au3GwR7SX0Vb681OFM",
+  authDomain: "smart-streetlight-projec-3659b.firebaseapp.com",
+  databaseURL: "https://smart-streetlight-projec-3659b-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "smart-streetlight-projec-3659b",
+  storageBucket: "smart-streetlight-projec-3659b.appspot.com",
+  messagingSenderId: "839303938140",
+  appId: "1:839303938140:web:c635e73362c9f34b56a699",
+  measurementId: "G-DRSWLTC166"
+};
+
+    firebase.initializeApp(firebaseConfig);
+
+    // Simulate data
+    const db = firebase.database();
+    const tableDataRef = db.ref('/');
+    let tableData = [];
+
+
+    // Function to load all data from Firebase
+    function loadAllData() {
+      const dataRef = db.ref('/');
+      dataRef.once('value')
+        .then(snapshot => {
+          tableData = []; // Clear existing data
+          snapshot.forEach(dateSnapshot => {
+            const date = dateSnapshot.key;
+            dateSnapshot.forEach(sensorSnapshot => {
+              const sensor = sensorSnapshot.key;
+              //console.log("sensor: " + sensor)
+              sensorSnapshot.forEach(entrySnapshot => {
+                const id = entrySnapshot.key;
+                const data = entrySnapshot.val();
+                
+             // Check if sensor is not null, undefined, or an empty string before pushing
+                  if (sensor !== null && sensor !== undefined && sensor !== '' && date && data && data.time && data.object_detected) {
+                      tableData.push({ sensor, date, data });
+                  }
+              });
+            });
+          });
+          //renderTable();
+          initializeTotalCountsDataTable();
+          renderTotalCountsChart();
+        })
+        .catch(error => {
+          console.error('Error loading data:', error.message);
+        });
+        //renderTotalCountsChart();
+    }
+
+    // Render the table with data
+    function renderTable() {
+
+     // console.log(tableData);`
+
+      $('#dataTable').DataTable({
+        destroy: false,
+        data: tableData,
+        columns: [
+          { data: 'date' },
+          { data: 'data.time' },
+          { data: 'sensor', render: function (data, type, row) { return row.sensor === 'Sensor1' ? row.data.object_detected : '0'; } },
+          { data: 'sensor', render: function (data, type, row) { return row.sensor === 'Sensor2' ? row.data.object_detected : '0'; } },
+          { data: 'sensor', render: function (data, type, row) { return row.sensor === 'Sensor3' ? row.data.object_detected : '0'; } }
+        ],
+        "language": {
+          "search": "Search", // Default search label
+          "searchPlaceholder": "YY-MM-DD" // Placeholder text for the search bar
+        },
+        error: function (err, type, table) {
+        console.log('DataTables error:', err);
+        // You can handle the error here, e.g., show an alert, log it, etc.
+        }
+      });
+
+      // Call function to initialize total counts table as DataTable
+      
+    }
+
+    // Function to initialize DataTable for total counts table
+    function initializeTotalCountsDataTable() {
+      const totalCounts = calculateTotalCounts();
+      $('#totalCountsTable').DataTable({
+        destroy: true,
+        data: Object.entries(totalCounts).map(([date, counts]) => ({ date, ...counts })),
+        columns: [
+          { data: 'date' },
+          { data: 'Sensor1' },
+          { data: 'Sensor2' },
+          { data: 'Sensor3' }
+        ],
+        "language": {
+        "search": "Search", // Default search label
+        "searchPlaceholder": "YY-MM-DD" // Placeholder text for the search bar
+    }
+      });
+
+      renderTable();
+    }
+
+    // Function to calculate total counts for each sensor each day
+    function calculateTotalCounts() {
+      const totalCounts = {};
+      tableData.forEach(entry => {
+        const date = entry.date;
+        const sensor = entry.sensor;
+        const count = parseInt(entry.data.object_detected) || 0;
+
+        if (!totalCounts[date]) {
+          totalCounts[date] = { 'Sensor1': 0, 'Sensor2': 0, 'Sensor3': 0 };
+        }
+
+        totalCounts[date][sensor] += count;
+      });
+
+      return totalCounts;
+    }
+
+    // Function to create a bar chart using Chart.js
+    function createBarChart(labels, data, chartTitle, chartId) {
+      
+
+      var existingChart = Chart.getChart(chartId);
+
+      if (existingChart) {
+        existingChart.destroy();
+      }
+
+      console.log(data)
+
+      var ctx = document.getElementById(chartId).getContext('2d');
+      var myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Sensor1',
+            data: labels.map(date => data[date][0]),
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+          }, {
+            label: 'Sensor2',
+            data:  labels.map(date => data[date][1]),
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+          }, {
+            label: 'Sensor3',
+            data:  labels.map(date => data[date][2]),
+            backgroundColor: 'rgba(255, 205, 86, 0.2)',
+            borderColor: 'rgba(255, 205, 86, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            x: {
+              beginAtZero: true
+            },
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    // Function to create a line chart using Chart.js
+function createLineChart(labels, data, chartTitle, chartId) {
+
+// Check if a chart with the given ID already exists and destroy it if it does
+var existingChart = Chart.getChart(chartId);
+if (existingChart) {
+  existingChart.destroy();
+}
+
+// Get the context of the canvas element we want to select
+var ctx = document.getElementById(chartId).getContext('2d');
+
+// Create the line chart
+var myChart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: labels,
+    datasets: [{
+      label: 'Sensor1',
+      data: labels.map(date => data[date][0]),
+      backgroundColor: 'rgba(75, 192, 192, 0.2)',
+      borderColor: 'rgba(75, 192, 192, 1)',
+      borderWidth: 1,
+      fill: false
+    }, {
+      label: 'Sensor2',
+      data: labels.map(date => data[date][1]),
+      backgroundColor: 'rgba(255, 99, 132, 0.2)',
+      borderColor: 'rgba(255, 99, 132, 1)',
+      borderWidth: 1,
+      fill: false
+    }, {
+      label: 'Sensor3',
+      data: labels.map(date => data[date][2]),
+      backgroundColor: 'rgba(255, 205, 86, 0.2)',
+      borderColor: 'rgba(255, 205, 86, 1)',
+      borderWidth: 1,
+      fill: false
+    }]
+  },
+  options: {
+    scales: {
+      x: {
+        beginAtZero: true
+      },
+      y: {
+        beginAtZero: true
+      }
+    }
+  }
+});
+}
+
+
+// Function to render total counts chart using Firebase data
+function renderTotalCountsChart() {
+  const labels = [];
+  const totalCountsData = [];
+
+  tableData.forEach(entry => {
+    const date = entry.date;
+    const sensor = entry.sensor;
+    const count = parseInt(entry.data.object_detected) || 0;
+
+    // Update the totalCountsData array based on the sensor
+    if (!totalCountsData[date]) {
+      totalCountsData[date] = [0, 0, 0];
+    }
+
+    if (sensor === 'Sensor1') {
+      totalCountsData[date][0] += count;
+    } else if (sensor === 'Sensor2') {
+      totalCountsData[date][1] += count;
+    } else if (sensor === 'Sensor3') {
+      totalCountsData[date][2] += count;
+    }
+
+    // Ensure unique dates in labels
+    if (!labels.includes(date)) {
+      labels.push(date);
+    }
+  });
+
+  console.log(totalCountsData);
+  console.log(labels);
+
+  // Create bar chart on 'totalCountsBarChart' canvas
+  createBarChart(labels, totalCountsData, 'Total Counts Chart', 'totalCountsBarChart');
+
+  // Create line chart on 'totalCountsLineChart' canvas
+  createLineChart(labels, totalCountsData, 'Total Counts Line Chart', 'totalCountsLineChart');
+}
+
+
+    // Document ready
+    $(document).ready(function () {
+      loadAllData(); // Initial data loading
+      
+    });
+  </script>
+
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+  <!-- DataTables JS -->
+  <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+
+  <!-- DataTables Bootstrap 4 Integration JS -->
+  <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.23/js/dataTables.bootstrap4.min.js"></script>
+</body>
+
+</html>

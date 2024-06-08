@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Form</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
+  <!--Stylesheet-->
+  <!-- Add Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <!-- Initialize Firebase -->
+  <style media="screen">
+    *,
+*:before,
+*:after{
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+body{
+  background-image: url(https://images.unsplash.com/photo-1485599352433-e476c850f2a9?q=80&w=1776&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D);
+  background-size: cover;
+}
+
+form{
+  height: 450px;
+  width: 350px;
+  background-color: rgba(255,255,255,0.13);
+  position: absolute;
+  transform: translate(-50%,-50%);
+  top: 50%;
+  left: 50%;
+  border-radius: 10px;
+  backdrop-filter: blur(5px);
+  border: 2px solid rgba(255,255,255,0.1);
+  box-shadow: 0 0 40px rgba(8,7,16,0.6);
+  padding: 50px 35px;
+}
+form *{
+  font-family: 'Poppins',sans-serif;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  outline: none;
+  border: none;
+}
+form h1{
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 42px;
+  text-align: center;
+}
+
+label{
+  display: block;
+  margin-top: 30px;
+  font-size: 16px;
+  font-weight: 500;
+}
+input{
+  display: block;
+  height: 50px;
+  width: 100%;
+  background-color: rgba(255,255,255,0.07);
+  border-radius: 3px;
+  padding: 0 10px;
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 300;
+}
+::placeholder{
+  color: #e5e5e5;
+}
+button{
+  margin-top: 50px;
+  width: 100%;
+  background-color: #ffffff;
+  color: #080710;
+  padding: 15px 0;
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: 5px;
+  cursor: pointer;
+}
+  </style>
+  <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAf25VFibNijidy1Au3GwR7SX0Vb681OFM",
+  authDomain: "smart-streetlight-projec-3659b.firebaseapp.com",
+  databaseURL: "https://smart-streetlight-projec-3659b-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "smart-streetlight-projec-3659b",
+  storageBucket: "smart-streetlight-projec-3659b.appspot.com",
+  messagingSenderId: "839303938140",
+  appId: "1:839303938140:web:c635e73362c9f34b56a699",
+  measurementId: "G-DRSWLTC166"
+};
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+  </script>
+</head>
+<body>
+<form id="loginForm">
+        <h1>Sign In</h1>
+        <label for="email">Username:</label>
+        <input type="email" id="email" name="email" required>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+        <button type="submit">Login</button>
+    </form>
+  <!-- Script to handle form submission -->
+  <script>
+    const loginForm = document.getElementById('loginForm');
+
+    loginForm.addEventListener('submit', (event) => {
+      event.preventDefault(); // Prevent default form submission
+
+      const email = loginForm.email.value;
+      const password = loginForm.password.value;
+
+      // Sign in with email and password
+      firebase.auth().signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          // Signed in successfully, redirect to home page
+          window.location.href = 'index.html';
+        })
+        .catch((error) => {
+          // Handle errors
+          console.error('Login failed:', error.message);
+          alert('Login failed. Please check your email and password.');
+        });
+    });
+
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (user) {
+        // User is signed in, redirect to home page
+        window.location.href = 'index.html';
+      } else {
+        // User is signed out, stay on login page
+        console.log('User is signed out.');
+      }
+    });
+  </script>
+</body>
+</html>

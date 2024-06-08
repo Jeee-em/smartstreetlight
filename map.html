@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Map</title>
+    <!-- Include Leaflet.js and Leaflet.VectorGrid -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        #map { /* Specify a height for the map container */
+            height: 70vh;
+        }
+    </style>
+</head>
+<body>
+    <!-- Map Container -->
+    <div id="map"></div>
+
+    <!-- Include Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        // Initialize the map
+        var map = L.map('map').setView([7.99341,124.26073], 18); // Set the center and zoom level for MSU main campus in Marawi City
+
+        // Add the OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Create an empty object to store markers
+        var markers = {};
+
+// Function to update marker popup
+function updateMarkerPopup(sensorId, lat, lng, message, objectDetected, dateTime) {
+    // Check if marker exists
+    if (markers[sensorId]) {
+        // Update existing marker's position and popup content
+        markers[sensorId].setLatLng([lat, lng]);
+        markers[sensorId].getPopup().setContent(objectDetected ? `<div style="text-align: center; color: red;">${message}<br>Date: ${dateTime}</div>` : message);
+        // Open the popup if an object is detected
+        if (objectDetected) {
+            markers[sensorId].openPopup();
+            // Close the popup after 3 seconds
+            setTimeout(function() {
+                markers[sensorId].closePopup();
+            }, 3000);
+        }
+    } else {
+        // Create a new marker and bind popup
+        markers[sensorId] = L.marker([lat, lng]).addTo(map).bindPopup(objectDetected ? `<div style="text-align: center; color: red;">${message}<br>Date: ${dateTime}</div>` : message);
+        // Open the popup if an object is detected
+        if (objectDetected) {
+            markers[sensorId].openPopup();
+            // Close the popup after 3 seconds
+            setTimeout(function() {
+                markers[sensorId].closePopup();
+            }, 3000);
+        }
+    }
+}
+
+
+
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAf25VFibNijidy1Au3GwR7SX0Vb681OFM",
+  authDomain: "smart-streetlight-projec-3659b.firebaseapp.com",
+  databaseURL: "https://smart-streetlight-projec-3659b-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "smart-streetlight-projec-3659b",
+  storageBucket: "smart-streetlight-projec-3659b.appspot.com",
+  messagingSenderId: "839303938140",
+  appId: "1:839303938140:web:c635e73362c9f34b56a699",
+  measurementId: "G-DRSWLTC166"
+};
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        // Reference to the Firebase Realtime Database
+        var database = firebase.database();
+
+        // Define sensor locations
+        var sensorLocations = [
+            { id: 'Sensor1', lat: 7.99373, lng: 124.26108 }, // Sensor 1 (MSU Main Campus)
+            { id: 'Sensor2', lat: 7.99338, lng: 124.26096 }, // Sensor 2 (Example)
+            { id: 'Sensor3', lat: 7.99312, lng: 124.26055 }      // Sensor 3 (Example)
+        ];
+
+        // Iterate over sensor locations and add markers to the map
+        sensorLocations.forEach(function(sensor) {
+            var sensorId = sensor.id;
+            var lat = sensor.lat;
+            var lng = sensor.lng;
+            var message = sensorId;
+
+            // Update marker popup
+            updateMarkerPopup(sensorId, lat, lng, message,);
+        });
+
+        var previousSensorData = {};
+
+// Store the previous sensor data
+var previousSensorData = {};
+
+// Store the previous sensor data
+var previousSensorData = {};
+
+// Listen for changes in the database
+database.ref().on('value', function(snapshot) {
+    snapshot.forEach(function(dateSnapshot) {
+        var date = dateSnapshot.key;
+        dateSnapshot.forEach(function(sensorSnapshot) {
+            var sensorId = sensorSnapshot.key;
+            var currentSensorData = sensorSnapshot.val();
+            
+            if (!previousSensorData[date]) {
+                previousSensorData[date] = {};
+            }
+
+            // Check if there are new detections
+            if (!isEqual(previousSensorData[date][sensorId], currentSensorData)) {
+                console.log("New detection under " + sensorId + " on " + date);
+                // Here you can update the marker or perform any other action
+                var lat = sensorLocations.find(sensor => sensor.id === sensorId).lat;
+                var lng = sensorLocations.find(sensor => sensor.id === sensorId).lng;
+
+                // Retrieve the date and time values
+                var time = currentSensorData.time; // Assuming time is stored in the sensor data
+                var dateTime = new Date().toLocaleString(); // Current date and time
+                
+                updateMarkerPopup(sensorId, lat, lng, "Object Detected!", true, dateTime);
+
+                // Revert the message back to the original after 3 seconds
+                setTimeout(function() {
+                    updateMarkerPopup(sensorId, lat, lng, sensorId, false);
+                }, 3000);
+
+                // Update previous sensor data
+                previousSensorData[date][sensorId] = currentSensorData;
+            }
+        });
+    });
+});
+
+
+// Function to compare two objects
+function isEqual(obj1, obj2) {
+    return JSON.stringify(obj1) === JSON.stringify(obj2);
+}
+
+
+
+
+
+
+
+
+
+    </script>
+</body>
+</html>
