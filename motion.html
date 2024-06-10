@@ -56,6 +56,17 @@
   }
 
   </style>
+    <script type="text/javascript" charset="utf8">
+// Custom sorting plugin for time with "AM" and "PM"
+$.extend($.fn.dataTable.ext.type.order, {
+    'time-format-pre': function (time) {
+        return moment(time, 'hh:mm:ss A').unix();
+    }
+});
+
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+
 </head>
 
 <body>
@@ -138,67 +149,86 @@ const firebaseConfig = {
     let tableData = [];
 
 
-    // Function to load all data from Firebase
-    function loadAllData() {
-      const dataRef = db.ref('/');
-      dataRef.once('value')
-        .then(snapshot => {
-          tableData = []; // Clear existing data
-          snapshot.forEach(dateSnapshot => {
-            const date = dateSnapshot.key;
-            dateSnapshot.forEach(sensorSnapshot => {
-              const sensor = sensorSnapshot.key;
-              //console.log("sensor: " + sensor)
-              sensorSnapshot.forEach(entrySnapshot => {
-                const id = entrySnapshot.key;
-                const data = entrySnapshot.val();
-                
-             // Check if sensor is not null, undefined, or an empty string before pushing
-                  if (sensor !== null && sensor !== undefined && sensor !== '' && date && data && data.time && data.object_detected) {
-                      tableData.push({ sensor, date, data });
-                  }
-              });
-            });
+// Function to load all data from Firebase and set up real-time listener
+function loadAllData() {
+  const dataRef = db.ref('/');
+  dataRef.once('value')
+    .then(snapshot => {
+      // Clear existing data
+      tableData = [];
+      snapshot.forEach(dateSnapshot => {
+        const date = dateSnapshot.key;
+        dateSnapshot.forEach(sensorSnapshot => {
+          const sensor = sensorSnapshot.key;
+          sensorSnapshot.forEach(entrySnapshot => {
+            const id = entrySnapshot.key;
+            const data = entrySnapshot.val();
+            if (sensor !== null && sensor !== undefined && sensor !== '' && date && data && data.time && data.object_detected) {
+              tableData.push({ sensor, date, data });
+            }
           });
-          //renderTable();
-          initializeTotalCountsDataTable();
-          renderTotalCountsChart();
-        })
-        .catch(error => {
-          console.error('Error loading data:', error.message);
         });
-        //renderTotalCountsChart();
-    }
-
-    // Render the table with data
-    function renderTable() {
-
-     // console.log(tableData);`
-
-      $('#dataTable').DataTable({
-        destroy: false,
-        data: tableData,
-        columns: [
-          { data: 'date' },
-          { data: 'data.time' },
-          { data: 'sensor', render: function (data, type, row) { return row.sensor === 'Sensor1' ? row.data.object_detected : '0'; } },
-          { data: 'sensor', render: function (data, type, row) { return row.sensor === 'Sensor2' ? row.data.object_detected : '0'; } },
-          { data: 'sensor', render: function (data, type, row) { return row.sensor === 'Sensor3' ? row.data.object_detected : '0'; } }
-        ],
-    order: [[0, 'desc']], // Sort by the first column (date) in descending order
-    "language": {
-      "search": "Search", // Default search label
-      "searchPlaceholder": "YY-MM-DD" // Placeholder text for the search bar
-    },
-        error: function (err, type, table) {
-        console.log('DataTables error:', err);
-        // You can handle the error here, e.g., show an alert, log it, etc.
-        }
       });
+      // Sort tableData by date and time (descending order)
+      tableData.sort((a, b) => {
+        const dateA = new Date(a.date + ' ' + a.data.time);
+        const dateB = new Date(b.date + ' ' + b.data.time);
+        return dateB.getTime() - dateA.getTime();
+      });
+      // Initialize DataTable and render chart
+      initializeTotalCountsDataTable();
+      renderTotalCountsChart();
+      // Set up real-time listener for changes in Firebase database
+      setupRealtimeListener();
+    })
+    .catch(error => {
+      console.error('Error loading data:', error.message);
+    });
+}
 
-      // Call function to initialize total counts table as DataTable
-      
+// Function to set up real-time listener for Firebase database changes
+function setupRealtimeListener() {
+  const dataRef = db.ref('/');
+  dataRef.on('child_changed', snapshot => {
+    // Reload all data when a change is detected in the database
+    loadAllData();
+  });
+}
+
+
+
+// Declare a variable to hold the reference to the DataTable instance
+let dataTable;
+
+// Function to render the DataTable with data
+function renderTable() {
+  // If dataTable exists, destroy it before reinitializing
+  if ($.fn.DataTable.isDataTable('#dataTable')) {
+    $('#dataTable').DataTable().destroy();
+  }
+
+  // Initialize the DataTable
+  dataTable = $('#dataTable').DataTable({
+    data: tableData,
+    columns: [
+      { data: 'date' },
+      { data: 'data.time' },
+      { data: 'sensor', render: function (data, type, row) { return row.sensor === 'Sensor1' ? row.data.object_detected : '0'; } },
+      { data: 'sensor', render: function (data, type, row) { return row.sensor === 'Sensor2' ? row.data.object_detected : '0'; } },
+      { data: 'sensor', render: function (data, type, row) { return row.sensor === 'Sensor3' ? row.data.object_detected : '0'; } }
+    ],
+    order: [[0, 'desc']], // Sort by the first column (date) in descending order
+    language: {
+      search: 'Search', // Default search label
+      searchPlaceholder: 'YY-MM-DD' // Placeholder text for the search bar
+    },
+    error: function (err, type, table) {
+      console.log('DataTables error:', err);
+      // You can handle the error here, e.g., show an alert, log it, etc.
     }
+  });
+}
+
 
     // Function to initialize DataTable for total counts table
     function initializeTotalCountsDataTable() {
@@ -212,11 +242,10 @@ const firebaseConfig = {
           { data: 'Sensor2' },
           { data: 'Sensor3' }
         ],
-    order: [[0, 'desc']], // Sort by the first column (date) in descending order
-    "language": {
-      "search": "Search", // Default search label
-      "searchPlaceholder": "YY-MM-DD" // Placeholder text for the search bar
-    },
+        "language": {
+        "search": "Search", // Default search label
+        "searchPlaceholder": "YY-MM-DD" // Placeholder text for the search bar
+    }
       });
 
       renderTable();
