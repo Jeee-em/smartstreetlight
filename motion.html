@@ -185,10 +185,11 @@ const firebaseConfig = {
           { data: 'sensor', render: function (data, type, row) { return row.sensor === 'Sensor2' ? row.data.object_detected : '0'; } },
           { data: 'sensor', render: function (data, type, row) { return row.sensor === 'Sensor3' ? row.data.object_detected : '0'; } }
         ],
-        "language": {
-          "search": "Search", // Default search label
-          "searchPlaceholder": "YY-MM-DD" // Placeholder text for the search bar
-        },
+    order: [[0, 'desc']], // Sort by the first column (date) in descending order
+    "language": {
+      "search": "Search", // Default search label
+      "searchPlaceholder": "YY-MM-DD" // Placeholder text for the search bar
+    },
         error: function (err, type, table) {
         console.log('DataTables error:', err);
         // You can handle the error here, e.g., show an alert, log it, etc.
@@ -211,10 +212,11 @@ const firebaseConfig = {
           { data: 'Sensor2' },
           { data: 'Sensor3' }
         ],
-        "language": {
-        "search": "Search", // Default search label
-        "searchPlaceholder": "YY-MM-DD" // Placeholder text for the search bar
-    }
+    order: [[0, 'desc']], // Sort by the first column (date) in descending order
+    "language": {
+      "search": "Search", // Default search label
+      "searchPlaceholder": "YY-MM-DD" // Placeholder text for the search bar
+    },
       });
 
       renderTable();
